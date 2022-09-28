@@ -78,7 +78,7 @@ function App() {
     expected_fee = 70000;
     let data = {
       order_code: order.order_code,
-      cus_id:order.cus_id,
+      customer_worker_site_id:order.customer_worker_site_id,
       electrician_worker_site_id: id,
       electrician_working_site_id:20984,
       expected_fee:expected_fee,
