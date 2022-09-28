@@ -29,7 +29,9 @@ function App() {
       if(data.action === 'close_order' || false) {
         setCloseOrder(true);
       }
-      setOrder(data);
+      if(data.action === 'find_electrician' || false) {
+        setOrder(data);
+      }
     })
     tempSocket.on(`cus-${tempId}`, (data)=>{
       console.log(data);
