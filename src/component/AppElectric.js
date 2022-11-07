@@ -1,21 +1,22 @@
 import OrderInfo from "./OrderInfo";
 
 function AppElectric(props) {
-    const {order,closeOrder} = props;
-    const handleAcceptOrder = ()=>{
+    const {orders,closeOrder} = props;
+    const handleAcceptOrder = (order)=>{
         props.handleAcceptOrder(order)
     }
+    let ordersView = orders && orders.length > 0 ?
+    orders.map((order, idx)=>{
+        return (
+            <div key={idx} style={{ marginBottom: '20px' }}>
+                <OrderInfo order={order} /> 
+                <button onClick={()=>handleAcceptOrder(order)} className="btn btn-success">Nhận Order</button>
+            </div>
+        )
+    }):null;
     return (
         <div>
-            {order ?
-            <div className="orderDetail">
-                <OrderInfo order={order} /> 
-                {closeOrder ? <p>Đơn hàng đã quá thời hạn tiếp nhận</p>
-                :
-                <button onClick={handleAcceptOrder} className="btn btn-success">Nhận Order</button>
-                }
-            </div>
-            :null}
+            {ordersView}
         </div>
     );
 }

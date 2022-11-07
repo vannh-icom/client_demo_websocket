@@ -3,44 +3,68 @@ import { useEffect, useState } from "react";
 import { io } from "socket.io-client";
 import AppClient from './component/AppClient';
 import AppElectric from "./component/AppElectric";
+
+const socket = io("ws://1.53.252.177:5000");
+// const socket = io("ws://localhost:5000");
 function App() {
-  const [socket, setSocket] = useState(null);
+  const [isConnected, setIsConnected] = useState(socket.connected);
   const [appType, setAppType] = useState(1);
   const [id, setId] = useState(null);
   const [order, setOrder] = useState(null);
-  const [closeOrder, setCloseOrder] = useState(false);
+  const [orders, setOrders] = useState([]);
+  const [closeOrder, setCloseOrder] = useState(null);
   const [orderStatus, setOrderStatus] = useState(false);
   useEffect(() => {
-    const tempSocket = io("ws://1.53.252.177:5000");
-    // const tempSocket = io("ws://localhost:5000");
-    tempSocket.on("connect", () => {
-      console.log(tempSocket.id); // "G5p5..."
+    // const tempSocket = io("ws://1.53.252.177:5000");
+    socket.on("connect", () => {
+      console.log(socket.id); // "G5p5..."
+      setIsConnected(true);
     });
+    socket.on('disconnect', ()=>{
+      setIsConnected(false);
+    })
+
     let urlSearch = new URLSearchParams(window.location.search);
     let tempId = urlSearch.get('id');
     let appId = urlSearch.get('type') ?? 1;
-    tempSocket.on(tempId,(data)=>{
+    socket.on(tempId,(data)=>{
       console.log('====================================');
       console.log(data);
       console.log('====================================');
       if(data.msg || false) {
-        tempSocket.disconnect();  
+        socket.disconnect();  
       }
       if(data.action === 'close_order' || false) {
-        setCloseOrder(true);
+        setCloseOrder(data.order_code);
       }
-      if(data.action === 'find_electrician' || false) {
+      if(data.action === 'find_electrician' || false) { 
         setOrder(data);
       }
     })
-    tempSocket.on(`cus-${tempId}`, (data)=>{
+    socket.on(`cus-${tempId}`, (data)=>{
       console.log(data);
       setOrderStatus(data);  
     })
-    setSocket(tempSocket);
     setAppType(parseInt(appId));
     setId(parseInt(tempId));
   }, []);
+  
+  useEffect(()=>{
+    let tempOrders = [...orders];
+    order && tempOrders.push(order);
+    tempOrders && setOrders(tempOrders);
+  },[order])
+
+  useEffect(()=>{
+    let tempOrders = [...orders];
+    if(closeOrder) {
+      tempOrders = tempOrders.filter((order)=>{
+        return order.order_code !== closeOrder
+      });
+      setOrders(tempOrders);
+    }
+    
+  },[closeOrder])
   
   function handleCreateOrder(flag){
     if(flag) {
@@ -72,12 +96,13 @@ function App() {
   }
 
   function handleTestClick(){
-    socket.emit('test', {"a":1});
+    
   }
 
   function handleAcceptOrder(order) {
     let support_time = "2022-07-12 20:12",
     expected_fee = 70000;
+    console.log(order);
     let data = {
       order_code: order.order_code,
       customer_worker_site_id:order.customer_worker_site_id,
@@ -86,14 +111,24 @@ function App() {
       expected_fee:expected_fee,
       electrician_note:"Tôi sẽ đến lúc 8h tối"
     }
-    socket.emit('order-accept', data);
+    try {
+      let event = `order-accept`;
+      console.log("ACCEPT ORDER", order.order_code);
+      socket.emit(event, data);
+      let tempOrders = orders.filter((o)=>o.order_code !== order.order_code);
+      setOrders(tempOrders)
+    } catch (error) {
+      console.log(error);      
+    }    
   }
+  console.log("ORDERS", orders);
   
   return (
     <div className="App">
       <button onClick={handleTestClick}>Test</button>
       <h3>{appType === 2 ? 'App Thợ' : 'App Epoint'}</h3>
-      {appType === 1 ? <AppClient handleCreateOrder={handleCreateOrder} orderStatus={orderStatus} /> : <AppElectric order={order} closeOrder={closeOrder} handleAcceptOrder={handleAcceptOrder}/>}
+      {appType === 1 ? <AppClient handleCreateOrder={handleCreateOrder} orderStatus={orderStatus} /> : 
+      <AppElectric orders={orders} closeOrder={closeOrder} handleAcceptOrder={handleAcceptOrder}/>}
     </div>
   );
 }
